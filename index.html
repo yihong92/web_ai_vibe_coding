@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🍽️ 今天吃什麼？</title>
+<style>
+    :root {
+        --bg: #0b0b0c;
+        --panel: #151516;
+        --panel-2: #1b1b1d;
+        --line: #333337;
+        --gold: #d6b36a;
+        --gold-light: #f0d69a;
+        --cream: #f4efe4;
+        --muted: #aaa59c;
+        --danger: #c66b62;
+        --wheel-size: min(68vw, 590px);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+        margin: 0;
+        min-height: 100%;
+        background:
+            radial-gradient(circle at 50% 25%, rgba(214,179,106,.08), transparent 34%),
+            linear-gradient(145deg, #0a0a0b, #111113 55%, #09090a);
+        color: var(--cream);
+        font-family: Georgia, "Noto Serif TC", "PingFang TC", "Microsoft JhengHei", serif;
+    }
+
+    body {
+        min-height: 100vh;
+        overflow-x: hidden;
+    }
+
+    button, input, select { font: inherit; }
+
+    button {
+        cursor: pointer;
+        border: 0;
+    }
+
+    button:disabled {
+        cursor: not-allowed;
+        opacity: .45;
+    }
+
+    .site-header {
+        width: min(1240px, calc(100% - 40px));
+        margin: 0 auto;
+        padding: 34px 0 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        border-bottom: 1px solid rgba(214,179,106,.18);
+    }
+
+    .brand-title {
+        margin: 0;
+        font-size: clamp(1.55rem, 3vw, 2.15rem);
+        letter-spacing: .04em;
+        font-weight: 600;
+    }
+
+    .brand-subtitle {
+        margin: 7px 0 0;
+        color: var(--muted);
+        font-size: .95rem;
+        letter-spacing: .08em;
+    }
+
+    .gold-button {
+        min-height: 46px;
+        padding: 0 19px;
+        border: 1px solid rgba(214,179,106,.7);
+        border-radius: 10px;
+        color: var(--gold-light);
+        background: rgba(214,179,106,.06);
+        transition: background .2s ease, border-color .2s ease, transform .2s ease;
+    }
+
+    .gold-button:hover {
+        background: rgba(214,179,106,.13);
+        border-color: var(--gold-light);
+        transform: translateY(-1px);
+    }
+
+    .main {
+        width: min(1240px, calc(100% - 40px));
+        margin: 0 auto;
+        padding: 52px 0 70px;
+    }
+
+    .intro {
+        text-align: center;
+        margin-bottom: 34px;
+    }
+
+    .intro h2 {
+        margin: 0;
+        font-size: clamp(1.55rem, 3vw, 2.25rem);
+        font-weight: 500;
+        letter-spacing: .08em;
+    }
+
+    .intro p {
+        margin: 10px 0 0;
+        color: var(--muted);
+        line-height: 1.8;
+    }
+
+    .decision-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(290px, 360px);
+        align-items: center;
+        gap: 62px;
+    }
+
+    .wheel-column {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .wheel-stage {
+        position: relative;
+        width: var(--wheel-size);
+        height: var(--wheel-size);
+        max-width: 100%;
+        aspect-ratio: 1;
+        display: grid;
+        place-items: center;
+    }
+
+    .pointer {
+        position: absolute;
+        z-index: 20;
+        top: -10px;
+        left: 50%;
+        width: 0;
+        height: 0;
+        transform: translateX(-50%);
+        border-left: 15px solid transparent;
+        border-right: 15px solid transparent;
+        border-top: 30px solid var(--gold-light);
+        filter: drop-shadow(0 4px 8px rgba(0,0,0,.7));
+    }
+
+    .pointer::after {
+        content: "";
+        position: absolute;
+        left: -7px;
+        top: -29px;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--gold-light);
+    }
+
+    .wheel-shell {
+        position: relative;
+        width: 94%;
+        height: 94%;
+        border-radius: 50%;
+        padding: 9px;
+        background: linear-gradient(145deg, #f0d69a, #9e7937 45%, #ead08d);
+        box-shadow:
+            0 0 0 1px rgba(255,255,255,.08),
+            0 18px 55px rgba(0,0,0,.58),
+            0 0 34px rgba(214,179,106,.13);
+    }
+
+    .wheel {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        overflow: hidden;
+        border: 2px solid #171719;
+        background: #202023;
+        transform: rotate(0deg);
+        will-change: transform;
+    }
+
+    .wheel::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        box-shadow: inset 0 0 35px rgba(0,0,0,.55);
+        pointer-events: none;
+        z-index: 10;
+    }
+
+    .wheel-label {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        z-index: 4;
+        width: 1px;
+        height: 1px;
+        transform-origin: 0 0;
+        pointer-events: none;
+    }
+
+    .wheel-label-inner {
+        position: absolute;
+        width: clamp(70px, 11vw, 105px);
+        text-align: center;
+        transform: translate(-50%, -50%);
+        transform-origin: center;
+        color: #fffaf0;
+        text-shadow: 0 2px 7px rgba(0,0,0,.75);
+        line-height: 1.15;
+        font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+        font-weight: 700;
+    }
+
+    .food-emoji {
+        display: block;
+        font-size: clamp(1.55rem, 4vw, 2.5rem);
+        margin-bottom: 5px;
+    }
+
+    .food-name {
+        display: block;
+        font-size: clamp(.78rem, 1.6vw, 1rem);
+        overflow-wrap: anywhere;
+    }
+
+    .wheel-center {
+        position: absolute;
+        z-index: 15;
+        width: 82px;
+        height: 82px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        color: var(--gold-light);
+        background: radial-gradient(circle at 35% 30%, #2c2c2f, #111113 70%);
+        border: 2px solid rgba(214,179,106,.75);
+        box-shadow: 0 6px 25px rgba(0,0,0,.55);
+        font-size: 2rem;
+        user-select: none;
+    }
+
+    .controls {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 28px;
+        background: linear-gradient(145deg, rgba(26,26,28,.95), rgba(14,14,15,.95));
+        box-shadow: 0 16px 40px rgba(0,0,0,.28);
+    }
+
+    .control-label {
+        display: block;
+        color: var(--muted);
+        font-size: .82rem;
+        letter-spacing: .12em;
+        margin-bottom: 10px;
+    }
+
+    .select-wrap {
+        position: relative;
+        margin-bottom: 22px;
+    }
+
+    select, input {
+        width: 100%;
+        min-height: 50px;
+        color: var(--cream);
+        background: #0e0e0f;
+        border: 1px solid #3b3b3f;
+        border-radius: 9px;
+        padding: 0 14px;
+        outline: none;
+        transition: border-color .2s ease, box-shadow .2s ease;
+    }
+
+    select:focus, input:focus {
+        border-color: var(--gold);
+        box-shadow: 0 0 0 3px rgba(214,179,106,.1);
+    }
+
+    option {
+        background: #171719;
+        color: #fff;
+    }
+
+    .spin-button {
+        width: 100%;
+        min-height: 58px;
+        border-radius: 10px;
+        color: #15120c;
+        background: linear-gradient(135deg, #f0d69a, #c69b4c);
+        font-weight: 700;
+        letter-spacing: .05em;
+        box-shadow: 0 8px 24px rgba(0,0,0,.3);
+        transition: transform .2s ease, filter .2s ease;
+    }
+
+    .spin-button:hover:not(:disabled) {
+        transform: translateY(-2px);
+        filter: brightness(1.06);
+    }
+
+    .spin-button:active:not(:disabled) {
+        transform: translateY(0);
+    }
+
+    .result {
+        min-height: 116px;
+        margin-top: 24px;
+        padding: 22px 18px;
+        border: 1px solid rgba(214,179,106,.2);
+        border-radius: 12px;
+        background: rgba(214,179,106,.035);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        text-align: center;
+        opacity: .72;
+    }
+
+    .result-label {
+        color: var(--muted);
+        font-size: .76rem;
+        letter-spacing: .16em;
+        margin-bottom: 8px;
+    }
+
+    .result-text {
+        font-size: 1.25rem;
+        color: var(--gold-light);
+        font-weight: 600;
+        line-height: 1.5;
+    }
+
+    .result.show {
+        animation: resultIn .65s ease;
+        opacity: 1;
+    }
+
+    @keyframes resultIn {
+        0% { opacity: 0; transform: scale(.94); }
+        65% { opacity: 1; transform: scale(1.035); }
+        100% { opacity: 1; transform: scale(1); }
+    }
+
+    .hint {
+        margin: 20px 0 0;
+        color: #77746f;
+        font-size: .78rem;
+        line-height: 1.7;
+        text-align: center;
+    }
+
+    .modal {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background: rgba(0,0,0,.76);
+        backdrop-filter: blur(7px);
+    }
+
+    .modal.open { display: flex; }
+
+    .modal-card {
+        width: min(720px, 100%);
+        max-height: min(760px, 90vh);
+        overflow: auto;
+        border: 1px solid rgba(214,179,106,.55);
+        border-radius: 18px;
+        background: linear-gradient(145deg, #1b1b1d, #101011);
+        box-shadow: 0 25px 80px rgba(0,0,0,.6);
+    }
+
+    .modal-card.small { width: min(450px, 100%); }
+
+    .modal-header {
+        padding: 22px 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #303034;
+    }
+
+    .modal-header h3 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 500;
+    }
+
+    .close-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        color: var(--cream);
+        background: transparent;
+        font-size: 1.35rem;
+        transition: background .2s ease;
+    }
+
+    .close-btn:hover { background: rgba(255,255,255,.08); }
+
+    .modal-body { padding: 24px; }
+
+    .add-trigger {
+        width: 100%;
+        min-height: 48px;
+        margin-bottom: 24px;
+        border: 1px dashed rgba(214,179,106,.55);
+        border-radius: 9px;
+        color: var(--gold-light);
+        background: rgba(214,179,106,.045);
+        transition: background .2s ease;
+    }
+
+    .add-trigger:hover { background: rgba(214,179,106,.1); }
+
+    .category-block + .category-block { margin-top: 24px; }
+
+    .category-title {
+        margin: 0 0 10px;
+        color: var(--gold-light);
+        font-size: .9rem;
+        letter-spacing: .12em;
+        font-weight: 500;
+    }
+
+    .food-list {
+        display: grid;
+        gap: 7px;
+    }
+
+    .food-row {
+        min-height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 7px 10px 7px 13px;
+        border: 1px solid #29292c;
+        border-radius: 8px;
+        background: rgba(255,255,255,.018);
+    }
+
+    .food-row-name {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+        font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    }
+
+    .food-row-name span:last-child {
+        overflow-wrap: anywhere;
+    }
+
+    .delete-btn {
+        flex: 0 0 auto;
+        padding: 7px 11px;
+        border: 1px solid rgba(198,107,98,.55);
+        border-radius: 7px;
+        color: #e2a49d;
+        background: transparent;
+        font-size: .8rem;
+    }
+
+    .delete-btn:hover:not(:disabled) {
+        background: rgba(198,107,98,.1);
+    }
+
+    .form-group { margin-bottom: 18px; }
+
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 24px;
+    }
+
+    .secondary-btn, .primary-btn {
+        min-height: 45px;
+        padding: 0 17px;
+        border-radius: 8px;
+    }
+
+    .secondary-btn {
+        color: var(--cream);
+        background: #29292c;
+        border: 1px solid #3a3a3e;
+    }
+
+    .primary-btn {
+        color: #15120c;
+        background: linear-gradient(135deg, #efd396, #c79b4d);
+        font-weight: 700;
+    }
+
+    .confirm-message {
+        margin: 0;
+        color: #ddd7cb;
+        line-height: 1.8;
+        text-align: center;
+    }
+
+    .confirm-message strong {
+        color: var(--gold-light);
+    }
+
+    .error-note {
+        min-height: 18px;
+        margin: 8px 0 0;
+        color: #d59a91;
+        font-size: .8rem;
+    }
+
+    @media (max-width: 900px) {
+        :root { --wheel-size: min(78vw, 560px); }
+
+        .decision-layout {
+            grid-template-columns: 1fr;
+            gap: 30px;
+        }
+
+        .controls {
+            width: min(560px, 100%);
+            margin: 0 auto;
+        }
+    }
+
+    @media (max-width: 600px) {
+        :root { --wheel-size: min(94vw, 500px); }
+
+        .site-header, .main {
+            width: min(100% - 24px, 1240px);
+        }
+
+        .site-header {
+            padding-top: 22px;
+            align-items: flex-start;
+        }
+
+        .brand-subtitle { font-size: .78rem; }
+
+        .gold-button {
+            min-height: 42px;
+            padding: 0 12px;
+            white-space: nowrap;
+            font-size: .82rem;
+        }
+
+        .main {
+            padding-top: 35px;
+        }
+
+        .intro {
+            margin-bottom: 24px;
+        }
+
+        .decision-layout {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .wheel-column { width: 100%; }
+
+        .controls {
+            padding: 21px;
+            border-radius: 14px;
+        }
+
+        .wheel-center {
+            width: 68px;
+            height: 68px;
+            font-size: 1.55rem;
+        }
+
+        .pointer {
+            top: -4px;
+            border-left-width: 12px;
+            border-right-width: 12px;
+            border-top-width: 25px;
+        }
+
+        .food-emoji {
+            margin-bottom: 3px;
+        }
+
+        .wheel-label-inner {
+            width: clamp(57px, 18vw, 85px);
+        }
+
+        .modal {
+            padding: 12px;
+        }
+
+        .modal-header, .modal-body {
+            padding: 18px;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+            scroll-behavior: auto !important;
+        }
+    }
+</style>
+</head>
+<body>
+<header class="site-header">
+    <div>
+        <h1 class="brand-title">🍽️ 今天吃什麼？</h1>
+        <p class="brand-subtitle">讓每一次選擇，都成為今日的美味。</p>
+    </div>
+    <button id="manageBtn" class="gold-button" type="button">⚙️ 管理食物</button>
+</header>
+
+<main class="main">
+    <section class="intro">
+        <h2>✨ 今日推薦</h2>
+        <p>今天，就讓命運替你決定。<br>轉動輪盤，交給一點運氣，也交給一份期待。</p>
+    </section>
+
+    <section class="decision-layout">
+        <div class="wheel-column">
+            <div class="wheel-stage" aria-label="食物決策輪盤">
+                <div class="pointer" aria-hidden="true"></div>
+                <div class="wheel-shell">
+                    <div id="wheel" class="wheel"></div>
+                </div>
+                <div class="wheel-center" aria-hidden="true">🍽️</div>
+            </div>
+        </div>
+
+        <aside class="controls">
+            <label class="control-label" for="categorySelect">選擇分類</label>
+            <div class="select-wrap">
+                <select id="categorySelect">
+                    <option value="早餐">早餐</option>
+                    <option value="午餐" selected>午餐</option>
+                    <option value="晚餐">晚餐</option>
+                    <option value="宵夜">宵夜</option>
+                </select>
+            </div>
+
+            <button id="spinBtn" class="spin-button" type="button">🎲 開始抽選</button>
+
+            <div id="result" class="result">
+                <div class="result-label">YOUR CHOICE</div>
+                <div id="resultText" class="result-text">準備好讓命運替你決定了嗎？</div>
+            </div>
+
+            <p class="hint">每次抽選都可能再次遇見同一道美味。</p>
+        </aside>
+    </section>
+</main>
+
+<!-- 管理食物 Modal -->
+<div id="managementModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="managementTitle">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 id="managementTitle">⚙️ 管理食物</h3>
+            <button class="close-btn" type="button" data-close-modal="managementModal" aria-label="關閉">×</button>
+        </div>
+        <div class="modal-body">
+            <button id="openAddBtn" class="add-trigger" type="button">＋ 新增食物</button>
+            <div id="managementList"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 新增食物 Modal -->
+<div id="addModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="addTitle">
+    <div class="modal-card small">
+        <div class="modal-header">
+            <h3 id="addTitle">＋ 新增食物</h3>
+            <button class="close-btn" type="button" data-close-modal="addModal" aria-label="關閉">×</button>
+        </div>
+        <div class="modal-body">
+            <form id="addFoodForm" novalidate>
+                <div class="form-group">
+                    <label class="control-label" for="foodNameInput">食物名稱</label>
+                    <input id="foodNameInput" type="text" autocomplete="off" placeholder="例如：雞肉飯">
+                    <p id="addError" class="error-note" aria-live="polite"></p>
+                </div>
+
+                <div class="form-group">
+                    <label class="control-label" for="addCategorySelect">分類</label>
+                    <select id="addCategorySelect">
+                        <option value="早餐">早餐</option>
+                        <option value="午餐" selected>午餐</option>
+                        <option value="晚餐">晚餐</option>
+                        <option value="宵夜">宵夜</option>
+                    </select>
+                </div>
+
+                <div class="form-actions">
+                    <button id="cancelAddBtn" class="secondary-btn" type="button">取消</button>
+                    <button id="confirmAddBtn" class="primary-btn" type="submit">確定新增</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 刪除確認 Modal -->
+<div id="deleteModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="deleteTitle">
+    <div class="modal-card small">
+        <div class="modal-header">
+            <h3 id="deleteTitle">刪除確認</h3>
+            <button class="close-btn" type="button" data-close-modal="deleteModal" aria-label="關閉">×</button>
+        </div>
+        <div class="modal-body">
+            <p id="deleteMessage" class="confirm-message"></p>
+            <div class="form-actions">
+                <button id="cancelDeleteBtn" class="secondary-btn" type="button">取消</button>
+                <button id="confirmDeleteBtn" class="primary-btn" type="button">確定刪除</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(() => {
+    "use strict";
+
+    const foods = {
+        早餐: [
+            "蛋餅", "飯糰", "燒餅油條", "三明治", "漢堡蛋",
+            "蘿蔔糕", "鐵板麵", "粥", "小籠包"
+        ],
+        午餐: [
+            "牛肉麵", "雞腿便當", "咖哩飯", "炒飯", "炒麵",
+            "滷肉飯", "水餃", "壽司", "排骨飯"
+        ],
+        晚餐: [
+            "火鍋", "韓式炸雞", "義大利麵", "牛排", "日式定食",
+            "燒肉", "石鍋拌飯", "拉麵", "鹽酥雞"
+        ],
+        宵夜: [
+            "鹽酥雞", "滷味", "雞排", "蚵仔煎", "大腸麵線",
+            "鍋燒麵", "臭豆腐", "串燒", "地瓜球"
+        ]
+    };
+
+    const categories = ["早餐", "午餐", "晚餐", "宵夜"];
+
+    let currentCategory = "午餐";
+    let currentRotation = 0;
+    let isSpinning = false;
+    let pendingDelete = null;
+
+    const wheel = document.getElementById("wheel");
+    const spinBtn = document.getElementById("spinBtn");
+    const categorySelect = document.getElementById("categorySelect");
+    const result = document.getElementById("result");
+    const resultText = document.getElementById("resultText");
+
+    const manageBtn = document.getElementById("manageBtn");
+    const managementModal = document.getElementById("managementModal");
+    const managementList = document.getElementById("managementList");
+    const openAddBtn = document.getElementById("openAddBtn");
+
+    const addModal = document.getElementById("addModal");
+    const addFoodForm = document.getElementById("addFoodForm");
+    const foodNameInput = document.getElementById("foodNameInput");
+    const addCategorySelect = document.getElementById("addCategorySelect");
+    const confirmAddBtn = document.getElementById("confirmAddBtn");
+    const cancelAddBtn = document.getElementById("cancelAddBtn");
+    const addError = document.getElementById("addError");
+
+    const deleteModal = document.getElementById("deleteModal");
+    const deleteMessage = document.getElementById("deleteMessage");
+    const cancelDeleteBtn = document.getElementById("cancelDeleteBtn");
+    const confirmDeleteBtn = document.getElementById("confirmDeleteBtn");
+
+    function getFoodEmoji(name) {
+        const rules = [
+            [/牛肉麵|拉麵|炒麵|鍋燒麵|大腸麵線/, "🍜"],
+            [/炒飯|滷肉飯|便當|飯糰|咖哩飯|排骨飯|雞肉飯|石鍋拌飯|定食/, "🍚"],
+            [/壽司/, "🍣"],
+            [/水餃|小籠包/, "🥟"],
+            [/炸雞|雞排|鹽酥雞/, "🍗"],
+            [/牛排|燒肉/, "🥩"],
+            [/漢堡/, "🍔"],
+            [/三明治/, "🥪"],
+            [/披薩|披薩|pizza/i, "🍕"],
+            [/火鍋/, "🍲"],
+            [/粥/, "🥣"],
+            [/蛋餅/, "🥚"],
+            [/蘿蔔糕/, "🍘"],
+            [/滷味|串燒|臭豆腐/, "🍢"],
+            [/蚵仔煎/, "🥘"],
+            [/地瓜球/, "🍠"],
+            [/義大利麵/, "🍝"],
+            [/韓式料理|韓式/, "🍛"],
+            [/甜點/, "🍰"]
+        ];
+
+        for (const [pattern, emoji] of rules) {
+            if (pattern.test(name)) return emoji;
+        }
+
+        return "🍽️";
+    }
+
+    function getSegmentColors(count) {
+        const palette = [
+            "#473c2c", "#343638", "#514536", "#292c2e",
+            "#5b4b31", "#3a3b3b", "#4a4035", "#303233",
+            "#5a4a32", "#383a3b", "#4b4134", "#2d3031"
+        ];
+        return Array.from({ length: count }, (_, i) => palette[i % palette.length]);
+    }
+
+    function renderWheel() {
+        if (isSpinning) return;
+
+        const currentFoods = foods[currentCategory];
+        const count = currentFoods.length;
+
+        wheel.innerHTML = "";
+        wheel.style.transition = "none";
+        wheel.style.transform = "rotate(0deg)";
+        currentRotation = 0;
+
+        const step = 360 / count;
+        const colors = getSegmentColors(count);
+
+        const segments = currentFoods.map((_, index) => {
+            const start = index * step;
+            const end = (index + 1) * step;
+            return `${colors[index]} ${start}deg ${end}deg`;
+        });
+
+        /*
+         * conic-gradient 的 0deg 被設定在正上方：
+         * from -90deg + start/end 角度，讓 JS 的 0deg 同樣代表 12 點鐘，
+         * 並且正方向皆為順時針。
+         */
+        wheel.style.background = `conic-gradient(from -90deg, ${segments.join(", ")})`;
+
+        currentFoods.forEach((food, index) => {
+            const centerAngle = index * step + step / 2;
+
+            const label = document.createElement("div");
+            label.className = "wheel-label";
+            label.style.transform = `rotate(${centerAngle}deg) translateY(calc(var(--wheel-label-radius, -200px)))`;
+
+            const inner = document.createElement("div");
+            inner.className = "wheel-label-inner";
+            inner.style.transform = `translate(-50%, -50%) rotate(${-centerAngle}deg)`;
+            inner.innerHTML = `
+                <span class="food-emoji">${getFoodEmoji(food)}</span>
+                <span class="food-name">${escapeHtml(food)}</span>
+            `;
+
+            label.appendChild(inner);
+            wheel.appendChild(label);
+        });
+
+        updateLabelRadius();
+        resetResult();
+    }
+
+    function updateLabelRadius() {
+        const labels = wheel.querySelectorAll(".wheel-label");
+        if (!labels.length) return;
+
+        const wheelSize = wheel.getBoundingClientRect().width;
+        const radius = Math.max(70, wheelSize * 0.32);
+
+        labels.forEach(label => {
+            label.style.setProperty("--wheel-label-radius", `${-radius}px`);
+        });
+    }
+
+    function renderManagement() {
+        managementList.innerHTML = "";
+
+        categories.forEach(category => {
+            const block = document.createElement("section");
+            block.className = "category-block";
+
+            const title = document.createElement("h4");
+            title.className = "category-title";
+            title.textContent = category;
+
+            const list = document.createElement("div");
+            list.className = "food-list";
+
+            foods[category].forEach((food, index) => {
+                const row = document.createElement("div");
+                row.className = "food-row";
+
+                const name = document.createElement("div");
+                name.className = "food-row-name";
+                name.innerHTML = `
+                    <span aria-hidden="true">${getFoodEmoji(food)}</span>
+                    <span>${escapeHtml(food)}</span>
+                `;
+
+                const deleteButton = document.createElement("button");
+                deleteButton.className = "delete-btn";
+                deleteButton.type = "button";
+                deleteButton.textContent = "刪除";
+                deleteButton.disabled = foods[category].length <= 2;
+
+                deleteButton.addEventListener("click", () => {
+                    requestDelete(category, index);
+                });
+
+                row.appendChild(name);
+                row.appendChild(deleteButton);
+                list.appendChild(row);
+            });
+
+            block.appendChild(title);
+            block.appendChild(list);
+            managementList.appendChild(block);
+        });
+    }
+
+    function addFood() {
+        if (isSpinning) return;
+
+        const name = foodNameInput.value.trim();
+        const category = addCategorySelect.value;
+
+        if (name === "") {
+            addError.textContent = "請輸入食物名稱。";
+            foodNameInput.focus();
+            return;
+        }
+
+        addError.textContent = "";
+
+        foods[category].push(name);
+
+        closeModal("addModal");
+        renderManagement();
+
+        if (category === currentCategory) {
+            renderWheel();
+        }
+
+        foodNameInput.value = "";
+        addCategorySelect.value = currentCategory;
+    }
+
+    function requestDelete(category, index) {
+        if (foods[category].length <= 2) return;
+
+        pendingDelete = { category, index };
+        const food = foods[category][index];
+
+        deleteMessage.innerHTML = `確定要刪除「<strong>${escapeHtml(food)}</strong>」嗎？`;
+        openModal("deleteModal");
+    }
+
+    function confirmDelete() {
+        if (!pendingDelete) return;
+
+        const { category, index } = pendingDelete;
+
+        if (foods[category].length <= 2) {
+            pendingDelete = null;
+            closeModal("deleteModal");
+            return;
+        }
+
+        foods[category].splice(index, 1);
+        pendingDelete = null;
+
+        closeModal("deleteModal");
+        renderManagement();
+
+        if (category === currentCategory) {
+            renderWheel();
+        }
+    }
+
+    function calculateTargetRotation(selectedIndex, count) {
+        const step = 360 / count;
+        const centerAngle = selectedIndex * step + step / 2;
+
+        /*
+         * wheel 初始時該食物中心位於 centerAngle。
+         * 旋轉後角度 = centerAngle + rotation。
+         * 要讓它落在 0deg（12 點鐘）：
+         * rotation ≡ -centerAngle (mod 360)。
+         */
+        const targetModulo = ((-centerAngle) % 360 + 360) % 360;
+        const currentModulo = ((currentRotation % 360) + 360) % 360;
+        const delta = (targetModulo - currentModulo + 360) % 360;
+
+        return delta;
+    }
+
+    function spin() {
+        if (isSpinning) return;
+
+        const currentFoods = foods[currentCategory];
+
+        if (currentFoods.length < 2) return;
+
+        isSpinning = true;
+        spinBtn.disabled = true;
+        categorySelect.disabled = true;
+        spinBtn.textContent = "⏳ 旋轉中...";
+
+        result.classList.remove("show");
+
+        const selectedIndex = Math.floor(Math.random() * currentFoods.length);
+        const step = 360 / currentFoods.length;
+        const centerAngle = selectedIndex * step + step / 2;
+
+        const extraTurns = 6 + Math.floor(Math.random() * 3);
+        const delta = calculateTargetRotation(selectedIndex, currentFoods.length);
+        const finalRotation = currentRotation + extraTurns * 360 + delta;
+
+        const duration = 3000 + Math.floor(Math.random() * 3001);
+
+        wheel.style.transition = `transform ${duration}ms cubic-bezier(.12, .82, .16, 1.03)`;
+        wheel.style.transform = `rotate(${finalRotation}deg)`;
+
+        currentRotation = finalRotation;
+
+        const selectedFood = currentFoods[selectedIndex];
+
+        const finish = () => {
+            wheel.removeEventListener("transitionend", finish);
+
+            isSpinning = false;
+            spinBtn.disabled = false;
+            categorySelect.disabled = false;
+            spinBtn.textContent = "🎲 開始抽選";
+
+            resultText.textContent = `🎉 今天吃：${getFoodEmoji(selectedFood)} ${selectedFood}！`;
+            result.classList.remove("show");
+            void result.offsetWidth;
+            result.classList.add("show");
+        };
+
+        wheel.addEventListener("transitionend", finish, { once: true });
+
+        // transitionend 在極少數瀏覽器狀況下沒有觸發時，提供安全兜底。
+        window.setTimeout(() => {
+            if (isSpinning) finish();
+        }, duration + 250);
+    }
+
+    function resetResult() {
+        result.classList.remove("show");
+        resultText.textContent = "準備好讓命運替你決定了嗎？";
+    }
+
+    function openModal(id) {
+        const modal = document.getElementById(id);
+        if (!modal) return;
+
+        modal.classList.add("open");
+        document.body.style.overflow = "hidden";
+    }
+
+    function closeModal(id) {
+        const modal = document.getElementById(id);
+        if (!modal) return;
+
+        modal.classList.remove("open");
+
+        if (!document.querySelector(".modal.open")) {
+            document.body.style.overflow = "";
+        }
+
+        if (id === "addModal") {
+            addError.textContent = "";
+        }
+
+        if (id === "deleteModal") {
+            pendingDelete = null;
+        }
+    }
+
+    function escapeHtml(value) {
+        return String(value)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    manageBtn.addEventListener("click", () => {
+        if (isSpinning) return;
+        renderManagement();
+        openModal("managementModal");
+    });
+
+    openAddBtn.addEventListener("click", () => {
+        addCategorySelect.value = currentCategory;
+        foodNameInput.value = "";
+        addError.textContent = "";
+        openModal("addModal");
+        window.setTimeout(() => foodNameInput.focus(), 0);
+    });
+
+    cancelAddBtn.addEventListener("click", () => {
+        closeModal("addModal");
+    });
+
+    confirmAddBtn.addEventListener("click", (event) => {
+        /*
+         * 確保「確定新增」本身直接有 click event。
+         * 若表單後續結構被修改，這裡仍會觸發 addFood()。
+         */
+        event.preventDefault();
+        addFood();
+    });
+
+    addFoodForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        addFood();
+    });
+
+    cancelDeleteBtn.addEventListener("click", () => {
+        closeModal("deleteModal");
+    });
+
+    confirmDeleteBtn.addEventListener("click", () => {
+        confirmDelete();
+    });
+
+    spinBtn.addEventListener("click", spin);
+
+    categorySelect.addEventListener("change", () => {
+        if (isSpinning) return;
+
+        currentCategory = categorySelect.value;
+        renderWheel();
+    });
+
+    document.querySelectorAll("[data-close-modal]").forEach(button => {
+        button.addEventListener("click", () => {
+            closeModal(button.dataset.closeModal);
+        });
+    });
+
+    document.querySelectorAll(".modal").forEach(modal => {
+        modal.addEventListener("click", event => {
+            if (event.target === modal) {
+                closeModal(modal.id);
+            }
+        });
+    });
+
+    document.addEventListener("keydown", event => {
+        if (event.key !== "Escape") return;
+
+        const openModalElement = document.querySelector(".modal.open");
+        if (openModalElement) {
+            closeModal(openModalElement.id);
+        }
+    });
+
+    window.addEventListener("resize", () => {
+        if (!isSpinning) updateLabelRadius();
+    });
+
+    renderWheel();
+    renderManagement();
+})();
+</script>
+</body>
+</html>
